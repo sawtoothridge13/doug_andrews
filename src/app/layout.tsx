@@ -24,9 +24,6 @@ export default function RootLayout({
             <Link href="/concerts" className="mr-4">
               Concerts
             </Link>
-            <Link href="/admin" className="mr-4">
-              Admin
-            </Link>
           </nav>
           {children}
         </Providers>
