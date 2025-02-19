@@ -1,4 +1,4 @@
-import ConcertCalendar from '../../components/ConcertCalendar';
+import ConcertCalendar from '@/components/ConcertCalendar';
 
 // This is example data - replace with your actual data source
 const sampleConcerts = [
@@ -21,7 +21,7 @@ const sampleConcerts = [
 export default function ConcertsPage() {
   return (
     <main className="min-h-screen py-8">
-      <ConcertCalendar concerts={sampleConcerts} />
+      <ConcertCalendar />
     </main>
   );
 }
