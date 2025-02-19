@@ -15,7 +15,8 @@ export async function POST(request: Request) {
       date: new Date(data.date),
       time: data.time,
       venue: data.venue,
-      ticketUrl: data.ticketUrl,
+      ticketUrl: data.ticketType === 'url' ? data.ticketUrl : null,
+      ticketType: data.ticketType,
       description: data.description,
     },
   });
@@ -38,19 +39,37 @@ export async function PUT(request: Request) {
     return new NextResponse('Unauthorized', { status: 401 });
   }
 
-  const data = await request.json();
-  const concert = await prisma.concert.update({
-    where: { id: data.id },
-    data: {
-      date: new Date(data.date),
-      time: data.time,
-      venue: data.venue,
-      ticketUrl: data.ticketUrl,
-      description: data.description,
-    },
-  });
+  try {
+    const data = await request.json();
 
-  return NextResponse.json(concert);
+    // Validate required fields
+    if (
+      !data.id ||
+      !data.date ||
+      !data.time ||
+      !data.venue ||
+      !data.ticketType
+    ) {
+      return new NextResponse('Missing required fields', { status: 400 });
+    }
+
+    const concert = await prisma.concert.update({
+      where: { id: data.id },
+      data: {
+        date: new Date(data.date),
+        time: data.time,
+        venue: data.venue,
+        ticketUrl: data.ticketType === 'url' ? data.ticketUrl : null,
+        ticketType: data.ticketType,
+        description: data.description || null,
+      },
+    });
+
+    return NextResponse.json(concert);
+  } catch (error) {
+    console.error('Update error:', error);
+    return new NextResponse('Error updating concert', { status: 500 });
+  }
 }
 
 export async function DELETE(request: Request) {

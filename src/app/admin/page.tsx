@@ -9,7 +9,8 @@ interface Concert {
   date: string;
   time: string;
   venue: string;
-  ticketUrl: string;
+  ticketUrl?: string;
+  ticketType: string;
   description?: string;
 }
 
@@ -22,6 +23,7 @@ export default function AdminPage() {
     time: '',
     venue: '',
     ticketUrl: '',
+    ticketType: 'url',
     description: '',
   });
   const [editingConcert, setEditingConcert] = useState<Concert | null>(null);
@@ -67,14 +69,19 @@ export default function AdminPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save concert');
+        const errorData = await response.text();
+        throw new Error(errorData || 'Failed to save concert');
       }
+
+      const savedConcert = await response.json();
+      console.log('Saved concert:', savedConcert); // For debugging
 
       setFormData({
         date: '',
         time: '',
         venue: '',
         ticketUrl: '',
+        ticketType: 'url',
         description: '',
       });
       setEditingConcert(null);
@@ -102,10 +109,11 @@ export default function AdminPage() {
   function handleEdit(concert: Concert) {
     setEditingConcert(concert);
     setFormData({
-      date: concert.date.split('T')[0], // Format date for input
+      date: new Date(concert.date).toISOString().split('T')[0], // Format date correctly
       time: concert.time,
       venue: concert.venue,
-      ticketUrl: concert.ticketUrl,
+      ticketUrl: concert.ticketUrl || '',
+      ticketType: concert.ticketType || 'url', // Provide default
       description: concert.description || '',
     });
   }
@@ -207,19 +215,42 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Ticket URL
+              <label className="block text-sm font-medium mb-1">
+                Ticket Type
               </label>
-              <input
-                type="url"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                value={formData.ticketUrl}
+              <select
+                name="ticketType"
+                value={formData.ticketType}
                 onChange={(e) =>
-                  setFormData({ ...formData, ticketUrl: e.target.value })
+                  setFormData({ ...formData, ticketType: e.target.value })
                 }
-              />
+                className="w-full p-2 border rounded"
+                required
+              >
+                <option value="url">Ticket URL</option>
+                <option value="door">Pay at Door</option>
+                <option value="donation">Donation</option>
+                <option value="free">Free</option>
+              </select>
             </div>
+
+            {formData.ticketType === 'url' && (
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Ticket URL
+                </label>
+                <input
+                  type="url"
+                  name="ticketUrl"
+                  value={formData.ticketUrl}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ticketUrl: e.target.value })
+                  }
+                  className="w-full p-2 border rounded"
+                  required={formData.ticketType === 'url'}
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
@@ -252,6 +283,7 @@ export default function AdminPage() {
                       time: '',
                       venue: '',
                       ticketUrl: '',
+                      ticketType: 'url',
                       description: '',
                     });
                   }}
@@ -278,6 +310,15 @@ export default function AdminPage() {
                   </div>
                   <div className="text-gray-600">{concert.time}</div>
                   <div className="text-gray-700">{concert.venue}</div>
+                  <div className="text-gray-600 mt-1">
+                    Tickets:{' '}
+                    {
+                      concert.ticketType
+                        ? concert.ticketType.charAt(0).toUpperCase() +
+                          concert.ticketType.slice(1)
+                        : 'URL' // Default value for existing concerts
+                    }
+                  </div>
                   {concert.description && (
                     <div className="text-gray-600 mt-2">
                       {concert.description}

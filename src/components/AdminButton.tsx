@@ -5,33 +5,37 @@ import Link from 'next/link';
 
 export default function AdminButton() {
   const { data: session } = useSession();
-
-  if (!session?.user?.isAdmin) return null;
+  const isAdmin = session?.user?.isAdmin;
 
   return (
     <Link
-      href="/admin"
-      className="fixed bottom-8 right-8 bg-blue-500 text-white p-4 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
-      aria-label="Admin Dashboard"
+      href={isAdmin ? '/admin' : '/login'}
+      className={`fixed bottom-8 right-8 p-4 rounded-full shadow-lg transition-colors ${
+        isAdmin ? 'bg-white hover:bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'
+      }`}
+      aria-label={isAdmin ? 'Admin Dashboard' : 'Login'}
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 24 24"
         fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
+        stroke={isAdmin ? 'black' : 'gray'}
+        strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         className="w-6 h-6"
       >
-        {/* Outhouse structure */}
-        <path d="M6 21V7l6-4 6 4v14H6z" />
-        {/* Door */}
-        <path d="M9 21V11h6v10" />
-        {/* Roof peak */}
-        <path d="M12 3l-8 5h16l-8-5z" />
-        {/* Moon cutout */}
-        <path d="M14 15h-1v-1h1z" />
+        {/* Door frame */}
+        <path d="M4 21V3h16v18" strokeWidth="2" />
+        {/* Left door */}
+        <path d="M6 21V7h5.5v14" />
+        {/* Right door */}
+        <path d="M18 21V7h-5.5v14" />
+        {/* Door details - horizontal planks */}
+        <path d="M6 11h5.5M12.5 11H18" strokeWidth="1" />
+        <path d="M6 15h5.5M12.5 15H18" strokeWidth="1" />
+        {/* Decorative swinging hinges */}
+        <path d="M11.5 8c0 .5-.5 1-1 1M12.5 8c0 .5.5 1 1 1" strokeWidth="1" />
       </svg>
     </Link>
   );
