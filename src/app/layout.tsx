@@ -1,6 +1,5 @@
 import './globals.css';
-// You might need to use a different font since American Typewriter isn't available on Google Fonts
-// Consider alternatives like 'Special Elite' which has a similar feel
+import Providers from '@/components/Providers';
 import { Special_Elite } from 'next/font/google';
 import Link from 'next/link';
 
@@ -17,13 +16,20 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={specialElite.className}>
-        <nav className="p-4">
-          <Link href="/" className="mr-4">
-            Home
-          </Link>
-          <Link href="/concerts">Concerts</Link>
-        </nav>
-        {children}
+        <Providers>
+          <nav className="p-4">
+            <Link href="/" className="mr-4">
+              Home
+            </Link>
+            <Link href="/concerts" className="mr-4">
+              Concerts
+            </Link>
+            <Link href="/admin" className="mr-4">
+              Admin
+            </Link>
+          </nav>
+          {children}
+        </Providers>
       </body>
     </html>
   );
