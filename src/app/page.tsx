@@ -2,7 +2,7 @@ import MovinOn from '../public/movin_on.svg';
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col font-american-typewriter">
       <header className="bg-white shadow-md w-full">
         <div className="container mx-auto px-4 py-6">
           <h1 className="text-3xl md:text-4xl lg:text-5xl text-center font-bold text-gray-800">

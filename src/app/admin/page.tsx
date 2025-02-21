@@ -296,8 +296,6 @@ export default function AdminPage() {
 
   // Fetch venue suggestions
   const fetchVenueSuggestions = debounce(async (query: string) => {
-    console.log('Fetching suggestions for:', query); // Debug log
-
     if (query.length < 2) {
       setVenueSuggestions([]);
       return;
@@ -307,27 +305,9 @@ export default function AdminPage() {
       const response = await fetch(
         `/api/venues?q=${encodeURIComponent(query)}`,
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const text = await response.text();
-      console.log('API response:', text); // Debug log
-
-      if (!text) {
-        setVenueSuggestions([]);
-        return;
-      }
-
-      const data = JSON.parse(text);
-      console.log('Parsed suggestions:', data); // Debug log
-
-      if (Array.isArray(data)) {
-        setVenueSuggestions(data);
-      } else {
-        setVenueSuggestions([]);
-      }
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      setVenueSuggestions(data);
     } catch (error) {
       console.error('Error fetching venues:', error);
       setVenueSuggestions([]);
