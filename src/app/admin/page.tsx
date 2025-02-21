@@ -15,6 +15,8 @@ interface Concert {
   ticketUrl?: string;
   ticketType: string;
   description?: string;
+  streetAddress: string;
+  postalCode: string;
 }
 
 interface VenueSuggestion {
@@ -42,6 +44,193 @@ interface FormData {
   postalCode: string;
 }
 
+const COUNTRIES = {
+  US: 'United States',
+  CA: 'Canada',
+  UK: 'United Kingdom',
+  DE: 'Germany',
+  FR: 'France',
+  IT: 'Italy',
+  ES: 'Spain',
+  PT: 'Portugal',
+  IE: 'Ireland',
+  NL: 'Netherlands',
+  BE: 'Belgium',
+  DK: 'Denmark',
+  SE: 'Sweden',
+  NO: 'Norway',
+  FI: 'Finland',
+  CH: 'Switzerland',
+  AT: 'Austria',
+  PL: 'Poland',
+  CZ: 'Czech Republic',
+  SK: 'Slovakia',
+  HU: 'Hungary',
+  RO: 'Romania',
+  BG: 'Bulgaria',
+  GR: 'Greece',
+  HR: 'Croatia',
+} as const;
+
+const STATES_BY_COUNTRY = {
+  US: {
+    AL: 'Alabama',
+    AK: 'Alaska',
+    AZ: 'Arizona',
+    AR: 'Arkansas',
+    CA: 'California',
+    CO: 'Colorado',
+    CT: 'Connecticut',
+    DE: 'Delaware',
+    FL: 'Florida',
+    GA: 'Georgia',
+    HI: 'Hawaii',
+    ID: 'Idaho',
+    IL: 'Illinois',
+    IN: 'Indiana',
+    IA: 'Iowa',
+    KS: 'Kansas',
+    KY: 'Kentucky',
+    LA: 'Louisiana',
+    ME: 'Maine',
+    MD: 'Maryland',
+    MA: 'Massachusetts',
+    MI: 'Michigan',
+    MN: 'Minnesota',
+    MS: 'Mississippi',
+    MO: 'Missouri',
+    MT: 'Montana',
+    NE: 'Nebraska',
+    NV: 'Nevada',
+    NH: 'New Hampshire',
+    NJ: 'New Jersey',
+    NM: 'New Mexico',
+    NY: 'New York',
+    NC: 'North Carolina',
+    ND: 'North Dakota',
+    OH: 'Ohio',
+    OK: 'Oklahoma',
+    OR: 'Oregon',
+    PA: 'Pennsylvania',
+    RI: 'Rhode Island',
+    SC: 'South Carolina',
+    SD: 'South Dakota',
+    TN: 'Tennessee',
+    TX: 'Texas',
+    UT: 'Utah',
+    VT: 'Vermont',
+    VA: 'Virginia',
+    WA: 'Washington',
+    WV: 'West Virginia',
+    WI: 'Wisconsin',
+    WY: 'Wyoming',
+  },
+  CA: {
+    AB: 'Alberta',
+    BC: 'British Columbia',
+    MB: 'Manitoba',
+    NB: 'New Brunswick',
+    NL: 'Newfoundland and Labrador',
+    NS: 'Nova Scotia',
+    NT: 'Northwest Territories',
+    NU: 'Nunavut',
+    ON: 'Ontario',
+    PE: 'Prince Edward Island',
+    QC: 'Quebec',
+    SK: 'Saskatchewan',
+    YT: 'Yukon',
+  },
+  UK: {
+    ENG: 'England',
+    SCT: 'Scotland',
+    WLS: 'Wales',
+    NIR: 'Northern Ireland',
+  },
+  DE: {
+    BW: 'Baden-Württemberg',
+    BY: 'Bavaria',
+    BE: 'Berlin',
+    BB: 'Brandenburg',
+    HB: 'Bremen',
+    HH: 'Hamburg',
+    HE: 'Hesse',
+    MV: 'Mecklenburg-Vorpommern',
+    NI: 'Lower Saxony',
+    NW: 'North Rhine-Westphalia',
+    RP: 'Rhineland-Palatinate',
+    SL: 'Saarland',
+    SN: 'Saxony',
+    ST: 'Saxony-Anhalt',
+    SH: 'Schleswig-Holstein',
+    TH: 'Thuringia',
+  },
+  FR: {
+    ARA: 'Auvergne-Rhône-Alpes',
+    BFC: 'Bourgogne-Franche-Comté',
+    BRE: 'Bretagne',
+    CVL: 'Centre-Val de Loire',
+    COR: 'Corse',
+    GES: 'Grand Est',
+    HDF: 'Hauts-de-France',
+    IDF: 'Île-de-France',
+    NOR: 'Normandie',
+    NAQ: 'Nouvelle-Aquitaine',
+    OCC: 'Occitanie',
+    PDL: 'Pays de la Loire',
+    PAC: "Provence-Alpes-Côte d'Azur",
+  },
+  IT: {
+    ABR: 'Abruzzo',
+    BAS: 'Basilicata',
+    CAL: 'Calabria',
+    CAM: 'Campania',
+    EMR: 'Emilia-Romagna',
+    FVG: 'Friuli Venezia Giulia',
+    LAZ: 'Lazio',
+    LIG: 'Liguria',
+    LOM: 'Lombardy',
+    MAR: 'Marche',
+    MOL: 'Molise',
+    PIE: 'Piedmont',
+    PUG: 'Puglia',
+    SAR: 'Sardinia',
+    SIC: 'Sicily',
+    TOS: 'Tuscany',
+    TAA: 'Trentino-Alto Adige',
+    UMB: 'Umbria',
+    VDA: "Valle d'Aosta",
+    VEN: 'Veneto',
+  },
+  ES: {
+    AND: 'Andalusia',
+    ARA: 'Aragon',
+    AST: 'Asturias',
+    BAL: 'Balearic Islands',
+    PVA: 'Basque Country',
+    CAN: 'Canary Islands',
+    CTB: 'Cantabria',
+    CLM: 'Castilla-La Mancha',
+    CYL: 'Castile and León',
+    CAT: 'Catalonia',
+    EXT: 'Extremadura',
+    GAL: 'Galicia',
+    MAD: 'Madrid',
+    MUR: 'Murcia',
+    NAV: 'Navarre',
+    RIO: 'La Rioja',
+    VAL: 'Valencia',
+  },
+  // Add other European countries' regions as needed
+} as const;
+
+// Add this helper function at the top level
+const getStateName = (stateCode: string | null, countryCode: string | null) => {
+  if (!stateCode || !countryCode) return '';
+  return STATES_BY_COUNTRY[countryCode as keyof typeof STATES_BY_COUNTRY]?.[
+    stateCode as keyof (typeof STATES_BY_COUNTRY)[keyof typeof STATES_BY_COUNTRY]
+  ];
+};
+
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -65,6 +254,7 @@ export default function AdminPage() {
   );
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [stateInputValue, setStateInputValue] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -154,6 +344,12 @@ export default function AdminPage() {
 
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: VenueSuggestion) => {
+    // Convert full country name to code
+    const countryCode =
+      Object.entries(COUNTRIES).find(
+        ([_, name]) => name === suggestion.country,
+      )?.[0] || '';
+
     setFormData({
       ...formData,
       venue: suggestion.venue,
@@ -161,8 +357,9 @@ export default function AdminPage() {
       city: suggestion.city || '',
       state: suggestion.state || '',
       postalCode: suggestion.postalCode || '',
-      country: suggestion.country || '',
+      country: countryCode,
     });
+    setStateInputValue(suggestion.state || '');
     setShowSuggestions(false);
   };
 
@@ -245,14 +442,14 @@ export default function AdminPage() {
       date: new Date(concert.date).toISOString().split('T')[0],
       time: concert.time || '',
       venue: concert.venue,
+      streetAddress: concert.streetAddress || '',
       city: concert.city || '',
       state: concert.state || '',
       country: concert.country || '',
       ticketUrl: concert.ticketUrl || '',
       ticketType: concert.ticketType || 'url',
       description: concert.description || '',
-      streetAddress: '',
-      postalCode: '',
+      postalCode: concert.postalCode || '',
     });
   }
 
@@ -385,6 +582,34 @@ export default function AdminPage() {
             </div>
 
             <div>
+              <label className="block text-sm font-medium mb-1">
+                Street Address
+              </label>
+              <input
+                type="text"
+                className="w-full p-2 border rounded"
+                value={formData.streetAddress}
+                onChange={(e) =>
+                  setFormData({ ...formData, streetAddress: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                className="w-full p-2 border rounded"
+                value={formData.postalCode}
+                onChange={(e) =>
+                  setFormData({ ...formData, postalCode: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium mb-1">City</label>
               <input
                 type="text"
@@ -397,40 +622,70 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-1">
-                State/Province
-              </label>
-              <select
-                name="state"
-                value={formData.state}
-                onChange={(e) =>
-                  setFormData({ ...formData, state: e.target.value })
-                }
-                className="w-full p-2 border rounded"
-              >
-                <option value="">Select State</option>
-                {/* Add US states */}
-                <option value="AL">Alabama</option>
-                <option value="AK">Alaska</option>
-                {/* ... add all states ... */}
-              </select>
-            </div>
-
-            <div>
               <label className="block text-sm font-medium mb-1">Country</label>
               <select
                 name="country"
                 value={formData.country}
-                onChange={(e) =>
-                  setFormData({ ...formData, country: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    country: e.target.value,
+                    state: '', // Reset state when country changes
+                  });
+                }}
                 className="w-full p-2 border rounded"
               >
                 <option value="">Select Country</option>
-                <option value="US">United States</option>
-                <option value="CA">Canada</option>
-                {/* Add more countries as needed */}
+                {Object.entries(COUNTRIES).map(([code, name]) => (
+                  <option key={code} value={code}>
+                    {name}
+                  </option>
+                ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                {formData.country === 'US'
+                  ? 'State'
+                  : formData.country === 'CA'
+                  ? 'Province'
+                  : formData.country === 'UK'
+                  ? 'Region'
+                  : 'State/Province/Region'}
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  value={stateInputValue}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setStateInputValue(value);
+                    setFormData({ ...formData, state: value });
+                  }}
+                  className="w-full p-2 border rounded"
+                  placeholder={`Enter or select ${
+                    formData.country === 'US'
+                      ? 'State'
+                      : formData.country === 'CA'
+                      ? 'Province'
+                      : 'Region'
+                  }`}
+                  list="state-options"
+                />
+                <datalist id="state-options">
+                  {formData.country &&
+                    Object.entries(
+                      STATES_BY_COUNTRY[
+                        formData.country as keyof typeof STATES_BY_COUNTRY
+                      ] || {},
+                    ).map(([code, name]) => (
+                      <option key={code} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                </datalist>
+              </div>
             </div>
 
             <div>
@@ -485,34 +740,6 @@ export default function AdminPage() {
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Street Address
-              </label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded"
-                value={formData.streetAddress}
-                onChange={(e) =>
-                  setFormData({ ...formData, streetAddress: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Postal Code
-              </label>
-              <input
-                type="text"
-                className="w-full p-2 border rounded"
-                value={formData.postalCode}
-                onChange={(e) =>
-                  setFormData({ ...formData, postalCode: e.target.value })
-                }
-              />
-            </div>
-
             <div className="flex gap-4">
               <button
                 type="submit"
@@ -563,8 +790,16 @@ export default function AdminPage() {
                   <div className="text-gray-700">
                     {concert.venue}
                     {concert.city && `, ${concert.city}`}
-                    {concert.state && `, ${concert.state}`}
-                    {concert.country && `, ${concert.country}`}
+                    {concert.state &&
+                      `, ${
+                        getStateName(concert.state, concert.country) ||
+                        concert.state
+                      }`}
+                    {concert.country &&
+                      `, ${
+                        COUNTRIES[concert.country as keyof typeof COUNTRIES] ||
+                        concert.country
+                      }`}
                   </div>
                   <div className="text-gray-600">{concert.time || 'TBA'}</div>
                   <div className="text-gray-600 mt-1">
