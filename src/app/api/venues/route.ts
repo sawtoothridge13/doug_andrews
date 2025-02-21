@@ -24,20 +24,34 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
 
+    console.log('Venue search query:', query);
+    console.log(
+      'API Key available:',
+      !!process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY,
+    );
+
     if (!query) {
       return NextResponse.json([]);
     }
 
     // First, get place predictions
-    const predictionsResponse = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-        query,
-      )}&types=establishment&key=${
-        process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
-      }`,
-    );
+    const predictionsUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+      query,
+    )}&types=establishment&key=${
+      process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY
+    }`;
 
+    console.log('Fetching predictions from:', predictionsUrl);
+
+    const predictionsResponse = await fetch(predictionsUrl);
     const predictionsData = await predictionsResponse.json();
+
+    console.log('Predictions response:', predictionsData);
+
+    if (!predictionsData.predictions) {
+      console.error('No predictions in response:', predictionsData);
+      return NextResponse.json([]);
+    }
 
     // Get details for each prediction
     const detailedVenues = await Promise.all(
