@@ -3,13 +3,10 @@
 import './globals.css';
 import AdminButton from '@/components/AdminButton';
 import Providers from '@/components/Providers';
-import { Special_Elite } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import Link from 'next/link';
 
-const specialElite = Special_Elite({
-  weight: '400',
-  subsets: ['latin'],
-});
+const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({
   children,
@@ -18,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={specialElite.className}>
+      <body className={inter.className}>
         <Providers>
           <nav className="p-4">
             <Link href="/" className="mr-4">

@@ -20,11 +20,19 @@ const ConcertCalendar = () => {
   const [concerts, setConcerts] = useState<Concert[]>([]);
 
   useEffect(() => {
-    async function fetchConcerts() {
-      const response = await fetch('/api/concerts');
-      const data = await response.json();
-      setConcerts(data);
-    }
+    const fetchConcerts = async () => {
+      try {
+        const response = await fetch('/api/concerts');
+        console.log('Concert response:', response); // Debug log
+        if (!response.ok) throw new Error('Failed to fetch');
+        const data = await response.json();
+        console.log('Concert data:', data); // Debug log
+        setConcerts(data);
+      } catch (error) {
+        console.error('Error fetching concerts:', error);
+      }
+    };
+
     fetchConcerts();
   }, []);
 
