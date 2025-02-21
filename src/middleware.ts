@@ -10,11 +10,9 @@ export default withAuth(
     const isAdmin = req.nextauth.token?.isAdmin;
 
     // Protect admin routes
-    if (path.startsWith('/admin')) {
-      if (!isAdmin) {
-        // Redirect non-admins to login
-        return NextResponse.redirect(new URL('/login', req.url));
-      }
+    if (path.startsWith('/admin') && !isAdmin) {
+      // Redirect non-admins to login
+      return NextResponse.redirect(new URL('/login', req.url));
     }
 
     return NextResponse.next();
@@ -22,6 +20,9 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token }) => !!token, // Require authentication for all protected routes
+    },
+    pages: {
+      signIn: '/login',
     },
   },
 );

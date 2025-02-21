@@ -1,15 +1,26 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function AdminButton() {
   const { data: session } = useSession();
+  const router = useRouter();
   const isAdmin = session?.user?.isAdmin;
+
+  const handleClick = async (e: React.MouseEvent) => {
+    if (isAdmin) {
+      e.preventDefault();
+      await signOut({ redirect: false });
+      router.push('/concerts');
+    }
+  };
 
   return (
     <Link
       href={isAdmin ? '/admin' : '/login'}
+      onClick={handleClick}
       className={`fixed bottom-8 right-8 p-4 rounded-full shadow-lg transition-colors ${
         isAdmin ? 'bg-white hover:bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'
       }`}

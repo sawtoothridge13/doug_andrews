@@ -2,31 +2,69 @@
 
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 
 interface Concert {
   id: string;
   date: string;
-  time: string;
+  time: string | null;
   venue: string;
+  city: string | null;
+  state: string | null;
+  country: string | null;
   ticketUrl?: string;
   ticketType: string;
   description?: string;
+}
+
+interface VenueSuggestion {
+  venue: string;
+  streetAddress: string;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  country: string | null;
+  formatted_address: string;
+}
+
+// Add interface for form data
+interface FormData {
+  date: string;
+  time: string;
+  venue: string;
+  city: string;
+  state: string;
+  country: string;
+  ticketUrl: string;
+  ticketType: string;
+  description: string;
+  streetAddress: string;
+  postalCode: string;
 }
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [concerts, setConcerts] = useState<Concert[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     date: '',
     time: '',
     venue: '',
+    city: '',
+    state: '',
+    country: '',
     ticketUrl: '',
     ticketType: 'url',
     description: '',
+    streetAddress: '',
+    postalCode: '',
   });
   const [editingConcert, setEditingConcert] = useState<Concert | null>(null);
+  const [venueSuggestions, setVenueSuggestions] = useState<VenueSuggestion[]>(
+    [],
+  );
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -54,6 +92,95 @@ export default function AdminPage() {
     }
   }
 
+  // Update the debounce function to be more specific about the function type
+  const debounce = <T extends (query: string) => unknown>(
+    func: T,
+    wait: number,
+  ) => {
+    let timeout: NodeJS.Timeout;
+    return (query: string) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(query), wait);
+    };
+  };
+
+  // Fetch venue suggestions
+  const fetchVenueSuggestions = debounce(async (query: string) => {
+    console.log('Fetching suggestions for:', query); // Debug log
+
+    if (query.length < 2) {
+      setVenueSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/venues?q=${encodeURIComponent(query)}`,
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const text = await response.text();
+      console.log('API response:', text); // Debug log
+
+      if (!text) {
+        setVenueSuggestions([]);
+        return;
+      }
+
+      const data = JSON.parse(text);
+      console.log('Parsed suggestions:', data); // Debug log
+
+      if (Array.isArray(data)) {
+        setVenueSuggestions(data);
+      } else {
+        setVenueSuggestions([]);
+      }
+    } catch (error) {
+      console.error('Error fetching venues:', error);
+      setVenueSuggestions([]);
+    }
+  }, 300);
+
+  // Handle venue input change
+  const handleVenueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, venue: value });
+    fetchVenueSuggestions(value);
+    setShowSuggestions(true);
+  };
+
+  // Handle suggestion click
+  const handleSuggestionClick = (suggestion: VenueSuggestion) => {
+    setFormData({
+      ...formData,
+      venue: suggestion.venue,
+      streetAddress: suggestion.streetAddress || '',
+      city: suggestion.city || '',
+      state: suggestion.state || '',
+      postalCode: suggestion.postalCode || '',
+      country: suggestion.country || '',
+    });
+    setShowSuggestions(false);
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -80,9 +207,14 @@ export default function AdminPage() {
         date: '',
         time: '',
         venue: '',
+        city: '',
+        state: '',
+        country: '',
         ticketUrl: '',
         ticketType: 'url',
         description: '',
+        streetAddress: '',
+        postalCode: '',
       });
       setEditingConcert(null);
       await fetchConcerts();
@@ -106,15 +238,21 @@ export default function AdminPage() {
     }
   }
 
+  // Update handleEdit to handle nulls
   function handleEdit(concert: Concert) {
     setEditingConcert(concert);
     setFormData({
-      date: new Date(concert.date).toISOString().split('T')[0], // Format date correctly
-      time: concert.time,
+      date: new Date(concert.date).toISOString().split('T')[0],
+      time: concert.time || '',
       venue: concert.venue,
+      city: concert.city || '',
+      state: concert.state || '',
+      country: concert.country || '',
       ticketUrl: concert.ticketUrl || '',
-      ticketType: concert.ticketType || 'url', // Provide default
+      ticketType: concert.ticketType || 'url',
       description: concert.description || '',
+      streetAddress: '',
+      postalCode: '',
     });
   }
 
@@ -185,33 +323,114 @@ export default function AdminPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Time
-              </label>
-              <input
-                type="time"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              <label className="block text-sm font-medium mb-1">Time</label>
+              <select
+                name="time"
                 value={formData.time}
                 onChange={(e) =>
                   setFormData({ ...formData, time: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+                required
+              >
+                <option value="">Select Time</option>
+                <option value="TBA">TBA</option>
+                {/* Generate time options from 12:00 AM to 11:30 PM */}
+                {Array.from({ length: 48 }, (_, i) => {
+                  const hour = Math.floor(i / 2);
+                  const minute = i % 2 === 0 ? '00' : '30';
+                  const ampm = hour < 12 ? 'AM' : 'PM';
+                  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+                  return `${hour12}:${minute} ${ampm}`;
+                }).map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="relative">
+              <label className="block text-sm font-medium mb-1">Venue</label>
+              <input
+                type="text"
+                required
+                className="w-full p-2 border rounded"
+                value={formData.venue}
+                onChange={handleVenueChange}
+                onFocus={() => setShowSuggestions(true)}
+              />
+
+              {showSuggestions && venueSuggestions.length > 0 && (
+                <div
+                  ref={suggestionsRef}
+                  className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-auto"
+                >
+                  {venueSuggestions.map((suggestion, index) => (
+                    <div
+                      key={index}
+                      className="p-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => handleSuggestionClick(suggestion)}
+                    >
+                      <div>{suggestion.venue}</div>
+                      <div className="text-sm text-gray-500">
+                        {[suggestion.city, suggestion.state, suggestion.country]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">City</label>
+              <input
+                type="text"
+                className="w-full p-2 border rounded"
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
                 }
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Venue
+              <label className="block text-sm font-medium mb-1">
+                State/Province
               </label>
-              <input
-                type="text"
-                required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                value={formData.venue}
+              <select
+                name="state"
+                value={formData.state}
                 onChange={(e) =>
-                  setFormData({ ...formData, venue: e.target.value })
+                  setFormData({ ...formData, state: e.target.value })
                 }
-              />
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select State</option>
+                {/* Add US states */}
+                <option value="AL">Alabama</option>
+                <option value="AK">Alaska</option>
+                {/* ... add all states ... */}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Country</label>
+              <select
+                name="country"
+                value={formData.country}
+                onChange={(e) =>
+                  setFormData({ ...formData, country: e.target.value })
+                }
+                className="w-full p-2 border rounded"
+              >
+                <option value="">Select Country</option>
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+                {/* Add more countries as needed */}
+              </select>
             </div>
 
             <div>
@@ -266,6 +485,34 @@ export default function AdminPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Street Address
+              </label>
+              <input
+                type="text"
+                className="w-full p-2 border rounded"
+                value={formData.streetAddress}
+                onChange={(e) =>
+                  setFormData({ ...formData, streetAddress: e.target.value })
+                }
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Postal Code
+              </label>
+              <input
+                type="text"
+                className="w-full p-2 border rounded"
+                value={formData.postalCode}
+                onChange={(e) =>
+                  setFormData({ ...formData, postalCode: e.target.value })
+                }
+              />
+            </div>
+
             <div className="flex gap-4">
               <button
                 type="submit"
@@ -282,9 +529,14 @@ export default function AdminPage() {
                       date: '',
                       time: '',
                       venue: '',
+                      city: '',
+                      state: '',
+                      country: '',
                       ticketUrl: '',
                       ticketType: 'url',
                       description: '',
+                      streetAddress: '',
+                      postalCode: '',
                     });
                   }}
                   className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
@@ -308,8 +560,13 @@ export default function AdminPage() {
                   <div className="font-semibold">
                     {new Date(concert.date).toLocaleDateString()}
                   </div>
-                  <div className="text-gray-600">{concert.time}</div>
-                  <div className="text-gray-700">{concert.venue}</div>
+                  <div className="text-gray-700">
+                    {concert.venue}
+                    {concert.city && `, ${concert.city}`}
+                    {concert.state && `, ${concert.state}`}
+                    {concert.country && `, ${concert.country}`}
+                  </div>
+                  <div className="text-gray-600">{concert.time || 'TBA'}</div>
                   <div className="text-gray-600 mt-1">
                     Tickets:{' '}
                     {

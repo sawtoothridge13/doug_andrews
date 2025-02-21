@@ -6,9 +6,13 @@ import { useEffect, useState } from 'react';
 interface Concert {
   id: string;
   date: string;
-  time: string;
+  time: string | null;
   venue: string;
-  ticketUrl: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  ticketUrl?: string;
+  ticketType: string;
   description?: string;
 }
 
@@ -38,19 +42,26 @@ const ConcertCalendar = () => {
             <div className="font-semibold">
               {format(new Date(concert.date), 'MMMM d, yyyy')}
             </div>
-            <div className="text-gray-600">{concert.time}</div>
-            <div className="text-gray-700">{concert.venue}</div>
+            <div className="text-gray-600">{concert.time || 'TBA'}</div>
+            <div className="text-gray-700">
+              {concert.venue}
+              {concert.city && `, ${concert.city}`}
+              {concert.state && `, ${concert.state}`}
+              {concert.country && `, ${concert.country}`}
+            </div>
             {concert.description && (
               <div className="text-gray-600 mt-2">{concert.description}</div>
             )}
-            <a
-              href={concert.ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-500 hover:text-blue-600 mt-2 inline-block"
-            >
-              Get Tickets
-            </a>
+            {concert.ticketUrl && (
+              <a
+                href={concert.ticketUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:text-blue-600 mt-2 inline-block"
+              >
+                Get Tickets
+              </a>
+            )}
           </div>
         ))}
       </div>
