@@ -347,7 +347,7 @@ export default function AdminPage() {
     // Convert full country name to code
     const countryCode =
       Object.entries(COUNTRIES).find(
-        ([_, name]) => name === suggestion.country,
+        ([code, name]) => name === suggestion.country,
       )?.[0] || '';
 
     setFormData({
