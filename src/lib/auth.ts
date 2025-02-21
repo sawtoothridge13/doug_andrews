@@ -1,5 +1,4 @@
 import { prisma } from '@/lib/prisma';
-import { PrismaAdapter } from '@auth/prisma-adapter';
 import bcrypt from 'bcryptjs';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
@@ -20,9 +19,15 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        const user = (await prisma.user.findUnique({
           where: { email: credentials.email },
-        });
+        })) as {
+          id: string;
+          email: string;
+          name: string;
+          isAdmin: boolean;
+          password: string;
+        };
 
         if (!user) {
           return null;
@@ -54,8 +59,9 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session: async ({ session, token }) => {
+      const typedToken = token as { isAdmin?: boolean };
       if (session?.user) {
-        session.user.isAdmin = token.isAdmin;
+        session.user.isAdmin = typedToken.isAdmin || false;
       }
       return session;
     },
