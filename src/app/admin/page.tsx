@@ -344,11 +344,10 @@ export default function AdminPage() {
 
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: VenueSuggestion) => {
-    // Convert full country name to code
-    const countryCode =
-      Object.entries(COUNTRIES).find(
-        ([code, name]) => name === suggestion.country,
-      )?.[0] || '';
+    // Convert full country name to code using Object.entries
+    const [countryCode] = Object.entries(COUNTRIES).find(
+      ([, name]) => name === suggestion.country,
+    ) || [''];
 
     setFormData({
       ...formData,
