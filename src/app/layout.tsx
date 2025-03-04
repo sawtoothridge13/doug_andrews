@@ -24,6 +24,9 @@ export default function RootLayout({
             <Link href="/concerts" className="mr-4">
               Concerts
             </Link>
+            <Link href="/bio" className="mr-4">
+              Bio
+            </Link>
           </nav>
           <div className="relative min-h-screen">
             {children}
