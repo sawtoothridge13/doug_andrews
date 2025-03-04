@@ -21,7 +21,9 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      if (response?.ok) {
+      if (response?.error) {
+        setError('Invalid email or password');
+      } else {
         // Successful login
         const res = await fetch('/api/user');
         const data = await res.json();
@@ -31,8 +33,6 @@ export default function LoginPage() {
         } else {
           router.push('/concerts');
         }
-      } else {
-        setError('Invalid email or password');
       }
     } catch (err) {
       console.error('Login error:', err);
