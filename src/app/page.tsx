@@ -1,4 +1,4 @@
-import MovinOn from '../public/movin_on.svg';
+import MovinOn from '../../public/movin_on.svg';
 
 export default function Home() {
   return (
