@@ -15,34 +15,37 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        console.log('Authorize called with:', credentials);
         if (!credentials?.email || !credentials?.password) {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
+        const user = (await prisma.user.findUnique({
           where: { email: credentials.email },
-        });
+        })) as {
+          id: string;
+          email: string;
+          name: string | null;
+          isAdmin: boolean;
+          password: string;
+        };
 
         if (!user) {
-          console.log('No user found with this email');
           return null;
         }
 
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
-          user.password
+          user.password,
         );
 
         if (!isPasswordValid) {
-          console.log('Invalid password');
           return null;
         }
 
         return {
           id: user.id,
           email: user.email,
-          name: user.name,
+          name: user.name || '',
           isAdmin: user.isAdmin,
         };
       },
@@ -56,9 +59,8 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     session: async ({ session, token }) => {
-      const typedToken = token as { isAdmin?: boolean };
       if (session?.user) {
-        session.user.isAdmin = typedToken.isAdmin || false;
+        session.user.isAdmin = Boolean(token.isAdmin);
       }
       return session;
     },

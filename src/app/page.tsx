@@ -11,9 +11,9 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="flex-grow flex items-center justify-center bg-white px-4 py-8">
+      <main className="flex-grow flex items-center justify-center bg-white px-4 py-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="w-full mb-12">
+          <div className="w-full mb-8">
             <MovinOn className="w-full h-auto text-black" />
           </div>
 

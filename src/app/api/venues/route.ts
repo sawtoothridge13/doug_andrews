@@ -44,6 +44,12 @@ export async function GET(request: Request) {
     console.log('Fetching predictions from:', predictionsUrl);
 
     const predictionsResponse = await fetch(predictionsUrl);
+    if (!predictionsResponse.ok) {
+      throw new Error(
+        `Predictions API failed: ${predictionsResponse.statusText}`,
+      );
+    }
+
     const predictionsData = await predictionsResponse.json();
 
     console.log('Predictions response:', predictionsData);
@@ -91,6 +97,9 @@ export async function GET(request: Request) {
     return NextResponse.json(detailedVenues);
   } catch (error) {
     console.error('Venue search error:', error);
-    return NextResponse.json([]);
+    return NextResponse.json(
+      { error: 'Failed to fetch venues' },
+      { status: 500 },
+    );
   }
 }

@@ -23,16 +23,18 @@ export default function LoginPage() {
 
       if (response?.error) {
         setError('Invalid email or password');
-      } else {
-        // Successful login
+        return;
+      }
+
+      try {
         const res = await fetch('/api/user');
+        if (!res.ok) throw new Error('Failed to fetch user data');
         const data = await res.json();
 
-        if (data.isAdmin) {
-          router.push('/admin');
-        } else {
-          router.push('/concerts');
-        }
+        router.push(data.isAdmin ? '/admin' : '/concerts');
+      } catch (err) {
+        console.error('User data fetch error:', err);
+        setError('Error fetching user data');
       }
     } catch (err) {
       console.error('Login error:', err);
