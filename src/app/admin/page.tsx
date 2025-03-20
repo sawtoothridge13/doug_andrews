@@ -1,8 +1,15 @@
+/// <reference types="@types/google.maps" />
 'use client';
 
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { FormEvent, useEffect, useRef, useState } from 'react';
+
+declare global {
+  interface Window {
+    gm_authFailure?: () => void;
+  }
+}
 
 interface Concert {
   id: string;
@@ -255,6 +262,10 @@ export default function AdminPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const [stateInputValue, setStateInputValue] = useState('');
+  const autocompleteService =
+    useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
+  const mapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -294,20 +305,198 @@ export default function AdminPage() {
     };
   };
 
-  // Fetch venue suggestions
+  // Initialize Google Maps services
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !autocompleteService.current) {
+      // Create a global error handler for Google Maps
+      window.gm_authFailure = () => {
+        console.error(
+          'Google Maps authentication failed. Please check your API key configuration.',
+        );
+      };
+
+      const loadGoogleMaps = () => {
+        return new Promise<void>((resolve, reject) => {
+          try {
+            // Check if Google Maps is already loaded
+            if (window.google && window.google.maps) {
+              console.log('Google Maps already loaded');
+              resolve();
+              return;
+            }
+
+            console.log('Loading Google Maps...');
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY}&libraries=places`;
+            script.async = true;
+            script.defer = true;
+
+            script.onload = () => {
+              console.log('Google Maps loaded successfully');
+              resolve();
+            };
+
+            script.onerror = (error) => {
+              console.error('Error loading Google Maps:', error);
+              reject(new Error('Failed to load Google Maps'));
+            };
+
+            document.head.appendChild(script);
+          } catch (error) {
+            console.error('Error in loadGoogleMaps:', error);
+            reject(error);
+          }
+        });
+      };
+
+      const initializeServices = async () => {
+        try {
+          await loadGoogleMaps();
+
+          if (!window.google || !window.google.maps) {
+            throw new Error('Google Maps not properly loaded');
+          }
+
+          console.log('Initializing Google Maps services...');
+
+          // Initialize AutocompleteService
+          autocompleteService.current =
+            new window.google.maps.places.AutocompleteService();
+          console.log('AutocompleteService initialized');
+
+          // Create a hidden map for PlacesService
+          const mapDiv = document.createElement('div');
+          mapDiv.style.display = 'none';
+          document.body.appendChild(mapDiv);
+          mapRef.current = mapDiv;
+
+          const map = new window.google.maps.Map(mapDiv, {
+            center: { lat: 0, lng: 0 },
+            zoom: 1,
+          });
+          console.log('Map instance created');
+
+          // Initialize PlacesService
+          placesService.current = new window.google.maps.places.PlacesService(
+            map,
+          );
+          console.log('PlacesService initialized');
+        } catch (error) {
+          console.error('Error initializing Google Maps services:', error);
+        }
+      };
+
+      initializeServices();
+
+      return () => {
+        // Cleanup
+        if (window.gm_authFailure) {
+          delete window.gm_authFailure;
+        }
+        const scriptTags = document.querySelectorAll(
+          `script[src*="maps.googleapis.com"]`,
+        );
+        scriptTags.forEach((tag) => tag.remove());
+        if (mapRef.current) {
+          mapRef.current.remove();
+        }
+        console.log('Google Maps cleanup completed');
+      };
+    }
+  }, []);
+
+  // Modify fetchVenueSuggestions to include better error handling
   const fetchVenueSuggestions = debounce(async (query: string) => {
-    if (query.length < 2) {
+    if (!query || query.length < 2) {
       setVenueSuggestions([]);
       return;
     }
 
+    if (!autocompleteService.current) {
+      console.error('AutocompleteService not initialized');
+      return;
+    }
+
+    if (!placesService.current) {
+      console.error('PlacesService not initialized');
+      return;
+    }
+
     try {
-      const response = await fetch(
-        `/api/venues?q=${encodeURIComponent(query)}`,
+      console.log('Fetching venue suggestions for query:', query);
+      const predictions = await new Promise<
+        google.maps.places.AutocompletePrediction[]
+      >((resolve, reject) => {
+        autocompleteService.current?.getPlacePredictions(
+          {
+            input: query,
+            types: ['establishment'],
+          },
+          (results, status) => {
+            console.log('Autocomplete status:', status);
+            if (
+              status === google.maps.places.PlacesServiceStatus.OK &&
+              results
+            ) {
+              console.log('Received predictions:', results.length);
+              resolve(results);
+            } else {
+              console.error('Autocomplete failed with status:', status);
+              reject(new Error(status || 'Failed to fetch predictions'));
+            }
+          },
+        );
+      });
+
+      // Get detailed place information for each prediction
+      const detailedPlaces = await Promise.all(
+        predictions.slice(0, 5).map(
+          (prediction) =>
+            new Promise<VenueSuggestion>((resolve, reject) => {
+              placesService.current?.getDetails(
+                {
+                  placeId: prediction.place_id,
+                  fields: ['name', 'formatted_address', 'address_components'],
+                },
+                (place, status) => {
+                  if (
+                    status === google.maps.places.PlacesServiceStatus.OK &&
+                    place
+                  ) {
+                    const getComponent = (type: string) => {
+                      const component = place.address_components?.find((comp) =>
+                        comp.types.includes(type),
+                      );
+                      return component?.long_name || null;
+                    };
+
+                    resolve({
+                      venue: place.name || '',
+                      streetAddress: [
+                        getComponent('street_number'),
+                        getComponent('route'),
+                      ]
+                        .filter(Boolean)
+                        .join(' '),
+                      city: getComponent('locality'),
+                      state: getComponent('administrative_area_level_1'),
+                      postalCode: getComponent('postal_code'),
+                      country: getComponent('country'),
+                      formatted_address: place.formatted_address || '',
+                    });
+                  } else {
+                    reject(
+                      new Error(status || 'Failed to fetch place details'),
+                    );
+                  }
+                },
+              );
+            }),
+        ),
       );
-      if (!response.ok) throw new Error('Failed to fetch');
-      const data = await response.json();
-      setVenueSuggestions(data);
+
+      setVenueSuggestions(detailedPlaces);
+      setShowSuggestions(true);
     } catch (error) {
       console.error('Error fetching venues:', error);
       setVenueSuggestions([]);
@@ -319,26 +508,57 @@ export default function AdminPage() {
     const value = e.target.value;
     setFormData({ ...formData, venue: value });
     fetchVenueSuggestions(value);
-    setShowSuggestions(true);
   };
 
   // Handle suggestion click
   const handleSuggestionClick = (suggestion: VenueSuggestion) => {
-    // Convert full country name to code using Object.entries
-    const [countryCode] = Object.entries(COUNTRIES).find(
-      ([, name]) => name === suggestion.country,
-    ) || [''];
+    // Helper function to get country code from country name
+    const getCountryCode = (countryName: string | null): string => {
+      if (!countryName) return '';
+      const entry = Object.entries(COUNTRIES).find(
+        (entry) => entry[1].toLowerCase() === countryName.toLowerCase(),
+      );
+      return entry ? entry[0] : '';
+    };
+
+    // Helper function to get state code from state name
+    const getStateCode = (
+      stateName: string | null,
+      countryCode: string,
+    ): string => {
+      if (!stateName || !countryCode) return '';
+      const stateMap =
+        STATES_BY_COUNTRY[countryCode as keyof typeof STATES_BY_COUNTRY];
+      if (!stateMap) return stateName || '';
+
+      const entry = Object.entries(stateMap).find(
+        (entry) => entry[1].toLowerCase() === stateName.toLowerCase(),
+      );
+      return entry ? entry[0] : stateName || '';
+    };
+
+    const countryCode = getCountryCode(suggestion.country);
+    const stateCode = getStateCode(suggestion.state, countryCode);
 
     setFormData({
       ...formData,
       venue: suggestion.venue,
       streetAddress: suggestion.streetAddress || '',
       city: suggestion.city || '',
-      state: suggestion.state || '',
+      state: stateCode,
       postalCode: suggestion.postalCode || '',
       country: countryCode,
     });
-    setStateInputValue(suggestion.state || '');
+
+    // Update the state input value to show the full state name
+    if (countryCode && stateCode) {
+      const stateName =
+        getStateName(stateCode, countryCode) || suggestion.state || '';
+      setStateInputValue(stateName);
+    } else {
+      setStateInputValue(suggestion.state || '');
+    }
+
     setShowSuggestions(false);
   };
 
